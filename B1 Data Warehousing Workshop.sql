@@ -95,7 +95,6 @@ FROM GARDEN_PLANTS.INFORMATION_SCHEMA.SCHEMATA
 where schema_name in ('FLOWERS','FRUITS','VEGGIES'); 
 
 
-
 -- Staging Data
 -- Create a Snowflake Stage Object:
  create stage garden_plants.veggies.like_a_window_into_an_s3_bucket 
@@ -151,7 +150,52 @@ file_format = ( format_name=COMMASEP_DBLQUOT_ONEHEADROW );
 
 
 -- Data Storage Structures
+-- Create a new database and set the context to use the new database:
+CREATE DATABASE LIBRARY_CARD_CATALOG COMMENT = 'DWW Lesson 9';
+USE DATABASE LIBRARY_CARD_CATALOG;
 
+-- Create and Author table:
+CREATE OR REPLACE TABLE AUTHOR (
+   AUTHOR_UID NUMBER 
+  ,FIRST_NAME VARCHAR(50)
+  ,MIDDLE_NAME VARCHAR(50)
+  ,LAST_NAME VARCHAR(50)
+);
+
+-- Insert the first two authors into the Author table:
+INSERT INTO AUTHOR(AUTHOR_UID,FIRST_NAME,MIDDLE_NAME, LAST_NAME) 
+Values
+(1, 'Fiona', '','Macdonald')
+,(2, 'Gian','Paulo','Faleschini');
+
+-- Look at your table with it's new rows:
+SELECT * 
+FROM AUTHOR;
+
+-- Create a Sequence:
+create sequence SEQ_AUTHOR_UID
+    start = 1
+    increment = 1
+    comment = 'Use this to fill in AUTHOR_UID';
+    
+-- See how the nextval function works:
+SELECT SEQ_AUTHOR_UID.nextval, SEQ_AUTHOR_UID.nextval;
+
+-- show sequences;
+
+-- Drop and recreate the counter (sequence) so that it starts at 3 then add the other author records to our author table:
+CREATE OR REPLACE SEQUENCE "LIBRARY_CARD_CATALOG"."PUBLIC"."SEQ_AUTHOR_UID" 
+START 3 
+INCREMENT 1 
+COMMENT = 'Use this to fill in the AUTHOR_UID every time you add a row';
+
+-- Add the remaining author records and use the nextval function instead of putting in the numbers:
+INSERT INTO AUTHOR(AUTHOR_UID,FIRST_NAME,MIDDLE_NAME, LAST_NAME) 
+Values
+(SEQ_AUTHOR_UID.nextval, 'Laura', 'K','Egendorf')
+,(SEQ_AUTHOR_UID.nextval, 'Jan', '','Grover')
+,(SEQ_AUTHOR_UID.nextval, 'Jennifer', '','Clapp')
+,(SEQ_AUTHOR_UID.nextval, 'Kathleen', '','Petelinsek');
 
 
 -- Create a 2nd Counter, a Book Table, and a Mapping Table:
