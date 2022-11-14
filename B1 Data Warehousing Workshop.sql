@@ -151,35 +151,323 @@ file_format = ( format_name=COMMASEP_DBLQUOT_ONEHEADROW );
 
 
 -- Data Storage Structures
--- Create a new database and set the context to use the new database:
-CREATE DATABASE LIBRARY_CARD_CATALOG COMMENT = 'DWW Lesson 9';
+
+
+
+-- Create a 2nd Counter, a Book Table, and a Mapping Table:
 USE DATABASE LIBRARY_CARD_CATALOG;
 
--- Create and Author table:
-CREATE OR REPLACE TABLE AUTHOR (
-   AUTHOR_UID NUMBER 
-  ,FIRST_NAME VARCHAR(50)
-  ,MIDDLE_NAME VARCHAR(50)
-  ,LAST_NAME VARCHAR(50)
+-- Create a new sequence, this one will be a counter for the book table:
+CREATE OR REPLACE SEQUENCE "LIBRARY_CARD_CATALOG"."PUBLIC"."SEQ_BOOK_UID" 
+START 1 
+INCREMENT 1 
+COMMENT = 'Use this to fill in the BOOK_UID everytime you add a row';
+
+-- Create the book table and use the NEXTVAL as the default value each time a row is added to the table:
+CREATE OR REPLACE TABLE BOOK
+( BOOK_UID NUMBER DEFAULT SEQ_BOOK_UID.nextval
+ ,TITLE VARCHAR(50)
+ ,YEAR_PUBLISHED NUMBER(4,0)
 );
 
--- Insert the first two authors into the Author table:
-INSERT INTO AUTHOR(AUTHOR_UID,FIRST_NAME,MIDDLE_NAME, LAST_NAME) 
-Values
-(1, 'Fiona', '','Macdonald')
-,(2, 'Gian','Paulo','Faleschini');
+-- Insert records into the book table, dont have to list anything for the BOOK_UID field because the default setting will take care of it:
+INSERT INTO BOOK(TITLE,YEAR_PUBLISHED)
+VALUES
+ ('Food',2001)
+,('Food',2006)
+,('Food',2008)
+,('Food',2016)
+,('Food',2015);
 
--- Look at your table with it's new rows:
-SELECT * 
-FROM AUTHOR;
+-- Create the relationships table this is sometimes called a "Many-to-Many table":
+CREATE TABLE BOOK_TO_AUTHOR
+(  BOOK_UID NUMBER
+  ,AUTHOR_UID NUMBER
+);
 
--- Create a Sequence:
-create sequence SEQ_AUTHOR_UID
-    start = 1
-    increment = 1
-    comment = 'Use this to fill in AUTHOR_UID';
-    
--- See how the nextval function works:
-SELECT SEQ_AUTHOR_UID.nextval, SEQ_AUTHOR_UID.nextval;
+-- Insert rows of the known relationships:
+INSERT INTO BOOK_TO_AUTHOR(BOOK_UID,AUTHOR_UID)
+VALUES
+ (1,1) -- This row links the 2001 book to Fiona Macdonald
+,(1,2) -- This row links the 2001 book to Gian Paulo Faleschini
+,(2,3) -- Links 2006 book to Laura K Egendorf
+,(3,4) -- Links 2008 book to Jan Grover
+,(4,5) -- Links 2016 book to Jennifer Clapp
+,(5,6);-- Links 2015 book to Kathleen Petelinsek
+
+-- Check your work by joining the 3 tables together, should get 1 row for every author:
+select * 
+from book_to_author ba 
+join author a 
+on ba.author_uid = a.author_uid 
+join book b 
+on b.book_uid=ba.book_uid; 
 
 
+-- Semi-Structured Data
+-- Create an Ingestion Table for XML Data:
+CREATE TABLE LIBRARY_CARD_CATALOG.PUBLIC.AUTHOR_INGEST_XML 
+(
+  "RAW_AUTHOR" VARIANT
+);
+
+-- Create File Format for XML Data:
+CREATE FILE FORMAT LIBRARY_CARD_CATALOG.PUBLIC.XML_FILE_FORMAT 
+TYPE = 'XML' 
+STRIP_OUTER_ELEMENT = FALSE 
+; 
+
+-- Load the XML Data into the XML Table:
+create stage LIBRARY_CARD_CATALOG.PUBLIC.like_a_window_into_an_s3_bucket 
+url = 's3://uni-lab-files';
+
+copy into LIBRARY_CARD_CATALOG.PUBLIC.AUTHOR_INGEST_XML
+From @like_a_window_into_an_s3_bucket
+files = ( 'author_with_header.xml')
+file_format = ( format_name='LIBRARY_CARD_CATALOG.PUBLIC.XML_FILE_FORMAT' );
+
+-- MODIFY File Format for XML Data by Changing Config:
+CREATE OR REPLACE FILE FORMAT LIBRARY_CARD_CATALOG.PUBLIC.XML_FILE_FORMAT 
+TYPE = 'XML' 
+COMPRESSION = 'AUTO' 
+PRESERVE_SPACE = FALSE 
+STRIP_OUTER_ELEMENT = TRUE 
+DISABLE_SNOWFLAKE_DATA = FALSE 
+DISABLE_AUTO_CONVERT = FALSE 
+IGNORE_UTF8_ERRORS = FALSE; 
+
+-- Drop all the rows from the table:
+TRUNCATE LIBRARY_CARD_CATALOG.PUBLIC.AUTHOR_INGEST_XML;
+
+-- Returns entire record:
+SELECT raw_author 
+FROM author_ingest_xml;
+
+-- Presents a kind of meta-data view of the data:
+SELECT raw_author:"$" 
+FROM author_ingest_xml; 
+
+-- Shows the root or top-level object name of each row:
+SELECT raw_author:"@" 
+FROM author_ingest_xml; 
+
+-- Returns AUTHOR_UID value from top-level object's attribute:
+SELECT raw_author:"@AUTHOR_UID"
+FROM author_ingest_xml;
+
+-- Returns value of NESTED OBJECT called FIRST_NAME:
+SELECT XMLGET(raw_author, 'FIRST_NAME'):"$"
+FROM author_ingest_xml;
+
+-- Returns the data in a way that makes it look like a normalized table:
+SELECT 
+raw_author:"@AUTHOR_UID" as AUTHOR_ID
+,XMLGET(raw_author, 'FIRST_NAME'):"$" as FIRST_NAME
+,XMLGET(raw_author, 'MIDDLE_NAME'):"$" as MIDDLE_NAME
+,XMLGET(raw_author, 'LAST_NAME'):"$" as LAST_NAME
+FROM AUTHOR_INGEST_XML;
+
+-- Add ::STRING to cast the values into strings and get rid of the quotes:
+SELECT 
+raw_author:"@AUTHOR_UID" as AUTHOR_ID
+,XMLGET(raw_author, 'FIRST_NAME'):"$"::STRING as FIRST_NAME
+,XMLGET(raw_author, 'MIDDLE_NAME'):"$"::STRING as MIDDLE_NAME
+,XMLGET(raw_author, 'LAST_NAME'):"$"::STRING as LAST_NAME
+FROM AUTHOR_INGEST_XML; 
+
+-- Nested Semi-Structured Data
+-- Create an Ingestion Table for JSON Data:
+CREATE TABLE "LIBRARY_CARD_CATALOG"."PUBLIC"."AUTHOR_INGEST_JSON" 
+(
+  "RAW_AUTHOR" VARIANT
+);
+
+-- Create File Format for JSON Data:
+CREATE FILE FORMAT LIBRARY_CARD_CATALOG.PUBLIC.JSON_FILE_FORMAT 
+TYPE = 'JSON' 
+COMPRESSION = 'AUTO' 
+ENABLE_OCTAL = FALSE
+ALLOW_DUPLICATE = FALSE
+STRIP_OUTER_ARRAY = TRUE
+STRIP_NULL_VALUES = FALSE
+IGNORE_UTF8_ERRORS = FALSE; 
+
+-- Load data into the table:
+copy into LIBRARY_CARD_CATALOG.PUBLIC.AUTHOR_INGEST_JSON
+From @like_a_window_into_an_s3_bucket
+files = ( 'author_with_header.json')
+file_format = ( format_name='LIBRARY_CARD_CATALOG.PUBLIC.JSON_FILE_FORMAT' );
+
+-- Returns AUTHOR_UID value from top-level object's attribute:
+select raw_author:AUTHOR_UID
+from author_ingest_json;
+
+-- Returns the data in a way that makes it look like a normalized table:
+SELECT 
+ raw_author:AUTHOR_UID
+,raw_author:FIRST_NAME::STRING as FIRST_NAME
+,raw_author:MIDDLE_NAME::STRING as MIDDLE_NAME
+,raw_author:LAST_NAME::STRING as LAST_NAME
+FROM AUTHOR_INGEST_JSON;
+
+-- Create an Ingestion Table for the NESTED JSON Data:
+CREATE OR REPLACE TABLE LIBRARY_CARD_CATALOG.PUBLIC.NESTED_INGEST_JSON 
+(
+  "RAW_NESTED_BOOK" VARIANT
+);
+
+-- Create File Format for JSON Data:
+CREATE FILE FORMAT LIBRARY_CARD_CATALOG.PUBLIC.JSON_FILE_FORMAT 
+TYPE = 'JSON' 
+COMPRESSION = 'AUTO' 
+ENABLE_OCTAL = FALSE
+ALLOW_DUPLICATE = FALSE
+STRIP_OUTER_ARRAY = TRUE
+STRIP_NULL_VALUES = FALSE
+IGNORE_UTF8_ERRORS = FALSE; 
+
+-- Load data into the table:
+copy into LIBRARY_CARD_CATALOG.PUBLIC.NESTED_INGEST_JSON 
+From @like_a_window_into_an_s3_bucket
+files = ( 'json_book_author_nested.txt')
+file_format = ( format_name='LIBRARY_CARD_CATALOG.PUBLIC.JSON_FILE_FORMAT' );
+
+-- A few simple queries:
+SELECT RAW_NESTED_BOOK
+FROM NESTED_INGEST_JSON;
+
+SELECT RAW_NESTED_BOOK:year_published
+FROM NESTED_INGEST_JSON;
+
+SELECT RAW_NESTED_BOOK:authors
+FROM NESTED_INGEST_JSON;
+
+-- Try changing the number in the bracketsd to return authors from a different row:
+SELECT RAW_NESTED_BOOK:authors[0].first_name
+FROM NESTED_INGEST_JSON;
+
+-- Use these example flatten commands to explore flattening the nested book and author data:
+SELECT value:first_name
+FROM NESTED_INGEST_JSON
+,LATERAL FLATTEN(input => RAW_NESTED_BOOK:authors);
+
+SELECT value:first_name
+FROM NESTED_INGEST_JSON
+,table(flatten(RAW_NESTED_BOOK:authors));
+
+-- Add a CAST command to the fields returned:
+SELECT value:first_name::VARCHAR, value:last_name::VARCHAR
+FROM NESTED_INGEST_JSON
+,LATERAL FLATTEN(input => RAW_NESTED_BOOK:authors);
+
+-- Assign new column  names to the columns using "AS":
+SELECT value:first_name::VARCHAR AS FIRST_NM
+, value:last_name::VARCHAR AS LAST_NM
+FROM NESTED_INGEST_JSON
+,LATERAL FLATTEN(input => RAW_NESTED_BOOK:authors);
+
+-- Create a new database to hold the Twitter file:
+CREATE DATABASE SOCIAL_MEDIA_FLOODGATES 
+COMMENT = 'There\'s so much data from social media - flood warning';
+
+USE DATABASE SOCIAL_MEDIA_FLOODGATES;
+
+-- Create a table in the new database:
+CREATE TABLE SOCIAL_MEDIA_FLOODGATES.PUBLIC.TWEET_INGEST 
+("RAW_STATUS" VARIANT) 
+COMMENT = 'Bring in tweets, one row per tweet or status entity';
+
+-- Create a JSON file format in the new database:
+CREATE FILE FORMAT SOCIAL_MEDIA_FLOODGATES.PUBLIC.JSON_FILE_FORMAT 
+TYPE = 'JSON' 
+COMPRESSION = 'AUTO' 
+ENABLE_OCTAL = FALSE 
+ALLOW_DUPLICATE = FALSE 
+STRIP_OUTER_ARRAY = TRUE 
+STRIP_NULL_VALUES = FALSE 
+IGNORE_UTF8_ERRORS = FALSE;
+
+-- Create a stage:
+create stage SOCIAL_MEDIA_FLOODGATES.PUBLIC.like_a_window_into_an_s3_bucket 
+ url = 's3://uni-lab-files';
+ 
+-- Load data into the table:
+copy into SOCIAL_MEDIA_FLOODGATES.PUBLIC.TWEET_INGEST 
+From @like_a_window_into_an_s3_bucket
+files = ( 'nutrition_tweets.json')
+file_format = ( format_name='SOCIAL_MEDIA_FLOODGATES.PUBLIC.JSON_FILE_FORMAT' );
+
+-- Select statements as seen in the video:
+SELECT RAW_STATUS
+FROM TWEET_INGEST;
+
+SELECT RAW_STATUS:entities
+FROM TWEET_INGEST;
+
+SELECT RAW_STATUS:entities:hashtags
+FROM TWEET_INGEST;
+
+-- Explore looking at specific hashtags by adding bracketed numbers:
+-- This query returns just the first hashtag in each tweet
+SELECT RAW_STATUS:entities:hashtags[0].text
+FROM TWEET_INGEST;
+
+-- This version adds a WHERE clause to get rid of any tweet that doesnt include any hashtags:
+SELECT RAW_STATUS:entities:hashtags[0].text
+FROM TWEET_INGEST
+WHERE RAW_STATUS:entities:hashtags[0].text is not null;
+
+-- Perform a simple CAST on the created_at key
+-- Add an ORDER BY clause to sort by the tweets creation date:
+SELECT RAW_STATUS:created_at::DATE
+FROM TWEET_INGEST
+ORDER BY RAW_STATUS:created_at::DATE;
+
+-- Flatten statements that return the whole hashtag entity:
+SELECT value
+FROM TWEET_INGEST
+,LATERAL FLATTEN
+(input => RAW_STATUS:entities:hashtags);
+
+SELECT value
+FROM TWEET_INGEST
+,TABLE(FLATTEN(RAW_STATUS:entities:hashtags));
+
+-- Flatten statement that restricts the value to just the TEXT of the hashtag:
+SELECT value:text
+FROM TWEET_INGEST
+,LATERAL FLATTEN
+(input => RAW_STATUS:entities:hashtags);
+
+-- Flatten and return just the hashtag text, CAST the text as VARCHAR:
+SELECT value:text::VARCHAR
+FROM TWEET_INGEST
+,LATERAL FLATTEN
+(input => RAW_STATUS:entities:hashtags);
+
+-- Flatten and return just the hashtag text, CAST the text as VARCHAR
+-- Use the AS command to name the column:
+SELECT value:text::VARCHAR AS THE_HASHTAG
+FROM TWEET_INGEST
+,LATERAL FLATTEN
+(input => RAW_STATUS:entities:hashtags);
+
+-- Add the Tweet ID and User ID to the returned table:
+SELECT RAW_STATUS:user:id AS USER_ID
+,RAW_STATUS:id AS TWEET_ID
+,value:text::VARCHAR AS HASHTAG_TEXT
+FROM TWEET_INGEST
+,LATERAL FLATTEN
+(input => RAW_STATUS:entities:hashtags);
+ 
+-- Create a View of the Tweet Data Looking "Normalized":
+create or replace view SOCIAL_MEDIA_FLOODGATES.PUBLIC.HASHTAGS_NORMALIZED as
+(SELECT RAW_STATUS:user:id AS USER_ID
+,RAW_STATUS:id AS TWEET_ID
+,value:text::VARCHAR AS HASHTAG_TEXT
+FROM TWEET_INGEST
+,LATERAL FLATTEN
+(input => RAW_STATUS:entities:hashtags)
+);
+
+SELECT * FROM SOCIAL_MEDIA_FLOODGATES.PUBLIC.HASHTAGS_NORMALIZED;
