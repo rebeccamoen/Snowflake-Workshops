@@ -1,4 +1,4 @@
-# Snowflake Course
+# Snowflake Workshops
 
 ### Badge 1: Data Warehousing Workshop
 
