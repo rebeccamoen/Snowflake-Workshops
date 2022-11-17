@@ -1,3 +1,14 @@
+-- Set your worksheet drop lists to the location of your GRADER function
+-- Where did you put the function?
+show functions in account;
+
+-- Did you put it here?
+select * 
+from snowflake.account_usage.functions
+where function_name = 'GRADER'
+and function_catalog = 'DEMO_DB'
+and function_owner = 'ACCOUNTADMIN';
+
 -- Set your worksheet drop lists to the location of your GRADER function using commands
 use role accountadmin;
 use database demo_db;
