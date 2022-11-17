@@ -47,3 +47,20 @@ This course covers a wide array of technologies to help build applications that 
 	12. Home Folders and CLI Basic Commands
 	13. Stages, SnowSQL, and PUT Commands
 	14. Streamlit, but with Snowflake Added
+
+### Badge 3: Sharing, Marketplace, & Exchanges Workshop
+
+A course covering Snowflake's revolutionary data sharing technologies. Learn to create and administer direct shares, shop for data sets on the Data Marketplace, and create and manage exchange data listings. Understand how your organization can get rid of nightly extracts and cumbersome ETL processes and possibly monetize your organization's data. 
+
+#### Lessons
+	1. Getting Set Up
+	2. Understanding the Inbound Shares
+	3. Joining Local Data with Shared Data
+	4. Creating an Outbound Share
+	5. Setting up Managed Reader Account for a Business Partner
+	6. From Reader Explorer to Full Snowflake Customer Account
+	7. Shopping the Data Marketplace
+	8. Caden Explores the Weather Data
+	9. Becoming a Provider on the Marketplace, or not
+	10. Prepping Data for an Exchange
+	11. The Share and the Shareback
