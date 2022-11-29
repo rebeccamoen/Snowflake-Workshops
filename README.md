@@ -64,3 +64,19 @@ A course covering Snowflake's revolutionary data sharing technologies. Learn to 
 	9. Becoming a Provider on the Marketplace, or not
 	10. Prepping Data for an Exchange
 	11. The Share and the Shareback
+
+### Badge 4: Data Lake Workshop
+
+The Data Lake Workshop (DLKW) covers non-loaded data and the tools you can use in Snowflake to access and analyze that data. Learn about non-loaded data, unstructured data, GeoSpatial data, and hear about the Iceberg tables that are coming soon! Get hands on experience with Parquet and GeoJSON data, and image data. Run GeoSpatial Functions and create your own User Defined Function.
+
+#### Lessons
+	1. Getting Set Up
+	2. Reviewing Data Structuring & Stage Types
+	3. Leaving the Data Where it Lands
+	4. Working with External Unstructured Data
+	5. Mel's Concept Kickoff
+	6. GeoSpatial Views
+	7. Exploring GeoSpatial Functions
+	8. Supercharging Development with Marketplace Data
+	9. Lions & Tigers & Bears, Oh My!!!
+	10. Prototypes, Pitches, & Proof of Concepts
