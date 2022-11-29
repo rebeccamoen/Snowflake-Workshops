@@ -92,3 +92,15 @@ SELECT
  ,2 as expected
  ,'Mel\'s views on the geospatial data from Camila' as description
  ); 
+
+-- DORA 7
+select DEMO_DB.PUBLIC.GRADER(step, (actual = expected), actual, expected, description) as graded_results from
+(
+ SELECT
+  'DLKW07' as step
+   ,(select round(max(max_northsouth))
+      from MELS_SMOOTHIE_CHALLENGE_DB.TRAILS.TRAILS_AND_BOUNDARIES)
+      as actual
+ ,40 as expected
+ ,'Trails Northern Extent' as description
+ ); 
