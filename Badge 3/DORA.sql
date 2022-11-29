@@ -125,3 +125,14 @@ where USER_NAME = 'MANAGED_READER_ADMIN' and query_text ilike ('%DE_TO%')) as ac
 , 1 as expected
 ,'03-00-01-11' as description
 ); 
+
+-- DORA 12
+select grader(step, (actual = expected), actual, expected, description) as graded_results from (
+ SELECT 'SMEW12' as step
+ ,(select count(*) 
+   from SNOWFLAKE.ACCOUNT_USAGE.DATABASES 
+   where database_name in ('INTL_DB','DEMO_DB','ACME', 'ACME_DETROIT','ADU_VINHANCED') 
+   and deleted is null) as actual
+ , 5 as expected
+ ,'Databases from all over!' as description
+); 
