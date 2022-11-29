@@ -136,3 +136,24 @@ select grader(step, (actual = expected), actual, expected, description) as grade
  , 5 as expected
  ,'Databases from all over!' as description
 ); 
+
+-- DORA 13
+select grader(step, (actual = expected), actual, expected, description) as graded_results from
+(
+SELECT 'SMEW13' as step
+ ,(select count(*) 
+   from MAX_OUTGOING.FOR_ACME.LOTSTOCKRETURN) as actual
+ , 298 as expected
+ ,'LotStockReturn Table loaded' as description
+
+); 
+
+-- DORA 14
+select grader(step, (actual = expected), actual, expected, description) as graded_results from (
+SELECT 
+  'SMEW14' as step
+ ,(select count(*) 
+   from DEMO_DB.PUBLIC.DETROIT_ZIPS) as actual
+ , 9 as expected
+ ,'Detroit Zips' as description
+); 
